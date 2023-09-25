@@ -33,6 +33,7 @@ namespace ShiftLoggerApi.Controllers
             {
                 return NotFound();
             }
+            shift.Worker = await _context.Workers.FindAsync(shift.WorkerId);
 
             return shift;
         }
@@ -71,16 +72,23 @@ namespace ShiftLoggerApi.Controllers
         // POST: api/Shift
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Shift>> PostShift(Shift shift)
+        public async Task<ActionResult<ShiftDto>> PostShift(ShiftDto shiftDto)
         {
+            var shift = new Shift
+            {
+                Start = shiftDto.Start,
+                End = shiftDto.End,
+                WorkerId = shiftDto.WorkerId,
+                Worker = await _context.Workers.FindAsync(shiftDto.WorkerId)
+            };
             _context.Shifts.Add(shift);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetShift", new { id = shift.Id }, shift);
+            return CreatedAtAction(nameof(GetShift), new { id = shift.Id }, shiftDto);
         }
 
         // DELETE: api/Shift/5
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:long}")]
         public async Task<IActionResult> DeleteShift(long id)
         {
             var shift = await _context.Shifts.FindAsync(id);
