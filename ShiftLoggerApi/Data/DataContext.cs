@@ -12,9 +12,12 @@ public class DataContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
     
         optionsBuilder.UseSqlServer(Config.GetConnectionString("ShiftsLogger"));
-    
-   
-    
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        
+    }
+
     public DbSet<Shift> Shifts { get; set; } = null!;
     public DbSet<Worker> Workers { get; set; } = null!;
 }

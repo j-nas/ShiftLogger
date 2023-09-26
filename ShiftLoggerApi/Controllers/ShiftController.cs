@@ -3,109 +3,121 @@ using Microsoft.EntityFrameworkCore;
 using ShiftLoggerApi.Data;
 using ShiftLoggerApi.Models;
 
-namespace ShiftLoggerApi.Controllers
+namespace ShiftLoggerApi.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class ShiftController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class ShiftController : ControllerBase
+    private readonly DataContext _context;
+
+    public ShiftController(DataContext context)
     {
-        private readonly DataContext _context;
+        _context = context;
+    }
 
-        public ShiftController(DataContext context)
+    // GET: api/Shift
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<ShiftDto>>> GetShifts(
+        [FromQuery] long? workerId = null)
+    {
+        var shifts = await _context.Shifts.ToListAsync();
+        if (workerId != null)
+            shifts = shifts.Where(s => s.WorkerId == workerId).ToList();
+        return Ok(shifts.Select(s => new ShiftDto
         {
-            _context = context;
-        }
+            Id = s.Id,
+            Start = s.Start,
+            End = s.End,
+            WorkerId = s.WorkerId
+        }));
+    }
 
-        // GET: api/Shift
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Shift>>> GetShifts()
+
+    // GET: api/Shift/5
+    [HttpGet("{id:long}")]
+    public async Task<ActionResult<ShiftDto>> GetShift(long id)
+    {
+        var shift = await _context.Shifts.FindAsync(id);
+
+        if (shift == null) return NotFound();
+        shift.Worker = await _context.Workers.FindAsync(shift.WorkerId);
+
+        return Ok(new ShiftDto
         {
-            return await _context.Shifts.ToListAsync();
-        }
+            Id = shift.Id,
+            Start = shift.Start,
+            End = shift.End,
+            WorkerId = shift.WorkerId
+        });
+    }
 
-        // GET: api/Shift/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Shift>> GetShift(long id)
+    // PUT: api/Shift/5
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutShift(long id, ShiftDto shiftDto)
+    {
+        if (id != shiftDto.Id) return BadRequest();
+        var shift = new Shift
         {
-            var shift = await _context.Shifts.FindAsync(id);
+            Id = shiftDto.Id,
+            Start = shiftDto.Start,
+            End = shiftDto.End,
+            WorkerId = shiftDto.WorkerId,
+            Worker = await _context.Workers.FindAsync(shiftDto.WorkerId)
+        };
 
-            if (shift == null)
-            {
-                return NotFound();
-            }
-            shift.Worker = await _context.Workers.FindAsync(shift.WorkerId);
+        _context.Entry(shift).State = EntityState.Modified;
 
-            return shift;
-        }
-
-        // PUT: api/Shift/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutShift(long id, Shift shift)
+        try
         {
-            if (id != shift.Id)
-            {
-                return BadRequest();
-            }
-
-            _context.Entry(shift).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ShiftExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/Shift
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<ShiftDto>> PostShift(ShiftDto shiftDto)
-        {
-            var shift = new Shift
-            {
-                Start = shiftDto.Start,
-                End = shiftDto.End,
-                WorkerId = shiftDto.WorkerId,
-                Worker = await _context.Workers.FindAsync(shiftDto.WorkerId)
-            };
-            _context.Shifts.Add(shift);
             await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetShift), new { id = shift.Id }, shiftDto);
         }
-
-        // DELETE: api/Shift/5
-        [HttpDelete("{id:long}")]
-        public async Task<IActionResult> DeleteShift(long id)
+        catch (DbUpdateConcurrencyException)
         {
-            var shift = await _context.Shifts.FindAsync(id);
-            if (shift == null)
-            {
+            if (!ShiftExists(id))
                 return NotFound();
-            }
-
-            _context.Shifts.Remove(shift);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            else
+                throw;
         }
 
-        private bool ShiftExists(long id)
+        return NoContent();
+    }
+
+    // POST: api/Shift
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPost]
+    public async Task<ActionResult<ShiftDto>> PostShift(ShiftDto shiftDto)
+    {
+        var shift = new Shift
         {
-            return (_context.Shifts?.Any(e => e.Id == id)).GetValueOrDefault();
-        }
+            Start = shiftDto.Start,
+            End = shiftDto.End,
+            WorkerId = shiftDto.WorkerId,
+            Worker = await _context.Workers.FindAsync(shiftDto.WorkerId)
+        };
+        _context.Shifts.Add(shift);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(nameof(GetShift), new { id = shift.Id },
+            shiftDto);
+    }
+
+    // DELETE: api/Shift/5
+    [HttpDelete("{id:long}")]
+    public async Task<IActionResult> DeleteShift(long id)
+    {
+        var shift = await _context.Shifts.FindAsync(id);
+        if (shift == null) return NotFound();
+
+        _context.Shifts.Remove(shift);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    private bool ShiftExists(long id)
+    {
+        return (_context.Shifts?.Any(e => e.Id == id)).GetValueOrDefault();
     }
 }
