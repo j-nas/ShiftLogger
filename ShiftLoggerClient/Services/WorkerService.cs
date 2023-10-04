@@ -1,62 +1,61 @@
 using System.Net;
-using System.Text;
-using Newtonsoft.Json;
+using ShiftLoggerClient.HttpClients;
 using ShiftLoggerClient.Models;
+using Spectre.Console;
 
 namespace ShiftLoggerClient.Services;
 
-internal class WorkerService
+internal static class WorkerService
 {
-    private readonly string _baseUrl;
-
-    public WorkerService(string baseUrl)
+    internal static void AddWorker()
     {
-        _baseUrl = baseUrl;
+        var worker = new Worker
+        {
+            Name = AnsiConsole.Ask<string>("What is the name of the worker?")
+        };
+        var result = WorkerClient.CreateWorker(worker);
+        AnsiConsole.MarkupLine(result == HttpStatusCode.Created
+            ? "[green]Worker created successfully[/]"
+            : "[red]Worker creation failed[/]");
     }
 
-    public async Task<List<Worker>?> GetWorkers()
+    internal static Worker SelectWorker()
     {
-        using var client = new HttpClient();
-        var response = await client.GetAsync($"{_baseUrl}api/worker");
-        var content = await response.Content.ReadAsStringAsync();
-        var workers = JsonConvert.DeserializeObject<List<Worker>>(content);
-        return workers;
+        var workers = WorkerClient.GetWorkers();
+        var result = workers.Result;
+        if (result is null)
+        {
+            AnsiConsole.MarkupLine(
+                "[red]No workers found. Please add one in the main menu[/]");
+            return new Worker();
+        }
+
+        var worker = AnsiConsole.Prompt(
+            new SelectionPrompt<Worker>()
+                .Title("Select a worker")
+                .AddChoices(result)
+                .UseConverter(worker => worker.Name!)
+        );
+        return worker;
     }
 
-    public async Task<Worker> GetWorker(long id)
+    internal static void UpdateWorker(Worker worker)
     {
-        using var client = new HttpClient();
-        var response = await client.GetAsync($"{_baseUrl}api/worker/{id}");
-        var content = await response.Content.ReadAsStringAsync();
-        var worker = JsonConvert.DeserializeObject<Worker>(content);
-        return worker ?? throw new Exception("Worker not found");
+        worker.Name =
+            AnsiConsole.Ask<string>("What is the new name of the worker?");
+        var result = WorkerClient.UpdateWorker(worker);
+        AnsiConsole.MarkupLine(result == HttpStatusCode.NoContent
+            ? "[green]Worker updated successfully[/]"
+            : "[red]Worker update failed[/]");
     }
-
-    public async Task<HttpStatusCode> CreateWorker(Worker worker)
+    internal static void DeleteWorker(Worker worker)
     {
-        using var client = new HttpClient();
-        var json = JsonConvert.SerializeObject(worker);
-        var content =
-            new StringContent(json, Encoding.UTF8, "application/json");
-        var response = await client.PostAsync($"{_baseUrl}api/worker", content);
-        return response.StatusCode;
-    }
-
-    public async Task<HttpStatusCode> UpdateWorker(Worker worker)
-    {
-        using var client = new HttpClient();
-        var json = JsonConvert.SerializeObject(worker);
-        var content =
-            new StringContent(json, Encoding.UTF8, "application/json");
-        var response =
-            await client.PutAsync($"{_baseUrl}api/worker/{worker.Id}", content);
-        return response.StatusCode;
-    }
-
-    public async Task<HttpStatusCode> DeleteWorker(long id)
-    {
-        using var client = new HttpClient();
-        var response = await client.DeleteAsync($"{_baseUrl}api/worker/{id}");
-        return response.StatusCode;
+        var confirm = AnsiConsole.Confirm(
+            "Are you sure you want to delete this worker? This cannot be undone");
+        if (!confirm) return;
+        var result = WorkerClient.DeleteWorker(worker.Id);
+        AnsiConsole.MarkupLine(result == HttpStatusCode.NoContent
+            ? "[green]Worker deleted successfully[/]"
+            : "[red]Worker deletion failed[/]");
     }
 }
