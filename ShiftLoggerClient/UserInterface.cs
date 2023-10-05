@@ -104,6 +104,7 @@ internal static class UserInterface
                     break;
                 case ShiftMenuOptions.DeleteShift:
                     ShiftServices.DeleteShift(shift);
+                    isShiftMenuRunning = false;
                     break;
                 case ShiftMenuOptions.GoBack:
                 default:

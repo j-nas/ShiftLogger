@@ -85,11 +85,26 @@ internal static class ShiftServices
 
     public static void UpdateShift(Shift shift)
     {
-        throw new NotImplementedException();
+        shift.Start = AnsiConsole.Confirm("Do you want to change the start time?")
+            ? DatePicker.GetDateTime()
+            : shift.Start;
+        shift.End = AnsiConsole.Confirm("Do you want to change the end time?")
+            ? DatePicker.GetDateTime()
+            : shift.End;
+        var result = ShiftClient.UpdateShift(shift).Result;
+        AnsiConsole.MarkupLine(result == HttpStatusCode.NoContent
+            ? "[green]Shift updated successfully[/]"
+            : "[red]Shift update failed[/]");
     }
 
     public static void DeleteShift(Shift shift)
     {
-        throw new NotImplementedException();
+        var confirm = AnsiConsole.Confirm(
+            "Are you sure you want to delete this shift? This cannot be undone");
+        if (!confirm) return;
+        var result = ShiftClient.DeleteShift(shift.Id).Result;
+        AnsiConsole.MarkupLine(result == HttpStatusCode.NoContent
+            ? "[green]Shift deleted successfully[/]"
+            : "[red]Shift deletion failed[/]");
     }
 }
