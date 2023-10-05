@@ -4,5 +4,5 @@ public enum ShiftMenuOptions
 {
     UpdateShift,
     DeleteShift,
-    Exit
+    GoBack
 }

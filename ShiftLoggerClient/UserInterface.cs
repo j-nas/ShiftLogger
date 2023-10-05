@@ -3,22 +3,20 @@ using ShiftLoggerClient.HttpClients;
 using ShiftLoggerClient.Models;
 using ShiftLoggerClient.Services;
 using Spectre.Console;
-using static ShiftLoggerClient.Enums.MainMenuOptions;
-using static ShiftLoggerClient.Enums.WorkerMenuOptions;
 
 namespace ShiftLoggerClient;
 
 internal static class UserInterface
 {
-    internal static void Title()
+    private static void Title()
     {
-        Console.Clear();
+        AnsiConsole.Clear();
         AnsiConsole.Write(new FigletText("ShiftLogger")
             .LeftJustified()
             .Color(Color.Green));
     }
 
-    internal static async void MainMenu()
+    internal static void MainMenu()
     {
         var isAppRunning = true;
         while (isAppRunning)
@@ -32,16 +30,16 @@ internal static class UserInterface
 
             switch (option)
             {
-                case SelectWorker:
+                case MainMenuOptions.SelectWorker:
                     var worker = WorkerService.SelectWorker();
                     WorkerMenu(worker);
-                    
+
                     break;
-                case AddWorker:
-                    
+                case MainMenuOptions.AddWorker:
+
                     WorkerService.AddWorker();
                     break;
-                case Exit:
+                case MainMenuOptions.Exit:
                 default:
                     isAppRunning = false;
                     break;
@@ -63,24 +61,53 @@ internal static class UserInterface
 
             switch (option)
             {
-                case SubmitShift:
+                case WorkerMenuOptions.SubmitShift:
                     ShiftServices.LogShift(worker.Id);
                     break;
-                case ViewShifts:
+                case WorkerMenuOptions.ViewShifts:
                     ShiftServices.ViewShifts(worker.Id);
                     break;
-                case ModifyShifts:
-                    ShiftServices.SelectShift(worker.Id);
+                case WorkerMenuOptions.ModifyShifts:
+                    var shift = ShiftServices.SelectShift(worker.Id);
+                    ShiftMenu(shift);
                     break;
-                case RenameWorker:
+                case WorkerMenuOptions.RenameWorker:
                     WorkerService.UpdateWorker(worker);
                     break;
-                case DeleteWorker:
+                case WorkerMenuOptions.DeleteWorker:
                     WorkerService.DeleteWorker(worker);
                     break;
-                case GoBack:
+                case WorkerMenuOptions.GoBack:
                 default:
                     isWorkerMenuRunning = false;
+                    break;
+            }
+        }
+    }
+
+    private static void ShiftMenu(Shift shift)
+    {
+        var isShiftMenuRunning = true;
+        while (isShiftMenuRunning)
+        {
+            Title();
+            ShiftTable.RenderOneShift(shift);
+            var option = AnsiConsole.Prompt(
+                new SelectionPrompt<ShiftMenuOptions>()
+                    .Title($"Choose an action for the shift on {shift.Start:d}:")
+                    .AddChoices(Enum.GetValues(typeof(ShiftMenuOptions))
+                        .Cast<ShiftMenuOptions>()));
+            switch (option)
+            {
+                case ShiftMenuOptions.UpdateShift:
+                    ShiftServices.UpdateShift(shift);
+                    break;
+                case ShiftMenuOptions.DeleteShift:
+                    ShiftServices.DeleteShift(shift);
+                    break;
+                case ShiftMenuOptions.GoBack:
+                default:
+                    isShiftMenuRunning = false;
                     break;
             }
         }
