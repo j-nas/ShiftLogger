@@ -6,13 +6,13 @@ if (args.Length == 0)
 Example: dotnet run https://localhost:7056");
 
 var baseUrlResult = Uri.TryCreate(Environment.GetCommandLineArgs()[1],
-    UriKind.Absolute, out _);
+    UriKind.Absolute, out var baseUrl);
 if (!baseUrlResult)
     throw new ArgumentException("Please provide a valid url");
 try
 {
     using var client = new HttpClient();
-    var response = client.GetAsync($"{args[0]}api/ping").Result;
+    var response = client.GetAsync($"{baseUrl}api/ping").Result;
     if (!response.IsSuccessStatusCode)
         throw new HttpRequestException();
 }
